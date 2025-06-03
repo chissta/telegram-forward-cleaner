@@ -1,34 +1,31 @@
 
-from aiogram import Bot, Dispatcher, types
-from aiogram.types import ContentType
-from aiogram.utils import executor
+import os
+from telegram import Update
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 
-API_TOKEN = '7742793435:AAEfiDRqV3l93abwRdbGVkewSbOl6UcH1rM'
-CHANNEL_ID = -1001396133180  # آیدی عددی کانال شما
+BOT_TOKEN = "7742793435:AAEfiDRqV3l93abwRdbGVkewSbOl6UcH1rM"
+CHANNEL_ID = -1001396133180
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+async def handle_forwarded(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    message = update.effective_message
 
-@dp.message_handler(content_types=ContentType.ANY)
-async def repost_clean(message: types.Message):
-    if message.chat.id == CHANNEL_ID and (message.forward_from_chat or message.forward_from):
+    if message.forward_date:
         try:
-            if message.text:
-                await bot.send_message(CHANNEL_ID, message.text)
-            elif message.photo:
-                await bot.send_photo(CHANNEL_ID, message.photo[-1].file_id, caption=message.caption)
+            await message.delete()
+            if message.photo:
+                file_id = message.photo[-1].file_id
+                await context.bot.send_photo(chat_id=CHANNEL_ID, photo=file_id, caption=message.caption)
             elif message.video:
-                await bot.send_video(CHANNEL_ID, message.video.file_id, caption=message.caption)
-            elif message.document:
-                await bot.send_document(CHANNEL_ID, message.document.file_id, caption=message.caption)
-            elif message.animation:
-                await bot.send_animation(CHANNEL_ID, message.animation.file_id, caption=message.caption)
-            elif message.audio:
-                await bot.send_audio(CHANNEL_ID, message.audio.file_id, caption=message.caption)
-            # حذف پیام اصلی
-            await bot.delete_message(CHANNEL_ID, message.message_id)
+                file_id = message.video.file_id
+                await context.bot.send_video(chat_id=CHANNEL_ID, video=file_id, caption=message.caption)
+            elif message.text:
+                await context.bot.send_message(chat_id=CHANNEL_ID, text=message.text)
+            elif message.caption:
+                await context.bot.send_message(chat_id=CHANNEL_ID, text=message.caption)
         except Exception as e:
-            print(f"Error processing message: {e}")
+            print(f"خطا: {e}")
 
 if __name__ == '__main__':
-    executor.start_polling(dp)
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app.add_handler(MessageHandler(filters.ALL & filters.Chat(chat_id=CHANNEL_ID), handle_forwarded))
+    app.run_polling()
